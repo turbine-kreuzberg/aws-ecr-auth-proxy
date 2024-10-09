@@ -1,0 +1,13 @@
+[Unit]
+Description=AWS ecr credentials image proxy
+After=network.target
+Before=containerd.service crio.service
+
+[Service]
+Type=simple
+User=root
+ExecStart={{ .Exec }}
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
