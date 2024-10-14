@@ -1,6 +1,6 @@
 {
-    "extends": ["config:base"],
-    "automerge": true,
+	"extends": ["config:base"],
+	"automerge": true,
 	"automergeType": "branch",
 	"requiredStatusChecks": ["Lint and Test"],
 	"packageRules": [
@@ -12,12 +12,6 @@
 		{
 			"matchManagers": ["github-actions"],
 			"groupName": "GitHub Actions",
-			"automerge": true
-		},
-		{
-			"matchPackageNames": ["golang"],
-			"matchManagers": ["golang-version"],
-			"groupName": "Go",
 			"automerge": true
 		}
 	]
