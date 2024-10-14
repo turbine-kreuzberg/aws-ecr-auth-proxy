@@ -35,9 +35,10 @@ func EtcHostsBlock(ctx context.Context) error {
 	return nil
 }
 
+var hostsFile = "/etc/hosts"
+
 func addBlockToEtcHosts(hosts []string) error {
 	// Read the /etc/hosts file
-	hostsFile := "/etc/hosts"
 	file, err := os.Open(hostsFile)
 	if err != nil {
 		return fmt.Errorf("failed to opening /etc/hosts: %s", err)

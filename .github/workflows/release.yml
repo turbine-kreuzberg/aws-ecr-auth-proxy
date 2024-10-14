@@ -1,0 +1,100 @@
+name: Release Go Binary and Docker Images for Ubuntu
+
+on:
+    push:
+        tags:
+            - "v*"
+
+jobs:
+    release:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Set up Go
+              uses: actions/setup-go@v4
+              with:
+                  # renovate: datasource=golang-version
+                  go-version: "1.20"
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v1
+
+            - name: Login to GitHub Container Registry
+              uses: docker/login-action@v1
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.repository_owner }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Set git variables
+              id: git_vars
+              run: |
+                  echo "GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+                  echo "GIT_REF=$(git describe --tags --always)" >> $GITHUB_OUTPUT
+
+            - name: Build binaries
+              run: |
+                  GOOS=linux GOARCH=amd64 go build -ldflags "-X main.gitHash=${{ steps.git_vars.outputs.GIT_HASH }} -X main.gitRef=${{ steps.git_vars.outputs.GIT_REF }}" -o aws-ecr-auth-proxy-ubuntu-amd64 ./cmd/main.go
+                  GOOS=linux GOARCH=arm64 go build -ldflags "-X main.gitHash=${{ steps.git_vars.outputs.GIT_HASH }} -X main.gitRef=${{ steps.git_vars.outputs.GIT_REF }}" -o aws-ecr-auth-proxy-ubuntu-arm64 ./cmd/main.go
+
+            - name: Create Release
+              id: create_release
+              uses: actions/create-release@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  tag_name: ${{ github.ref }}
+                  release_name: Release ${{ github.ref }}
+                  draft: false
+                  prerelease: false
+
+            - name: Upload Ubuntu AMD64 Asset
+              uses: actions/upload-release-asset@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  upload_url: ${{ steps.create_release.outputs.upload_url }}
+                  asset_path: ./aws-ecr-auth-proxy-ubuntu-amd64
+                  asset_name: aws-ecr-auth-proxy-ubuntu-amd64
+                  asset_content_type: application/octet-stream
+
+            - name: Upload Ubuntu ARM64 Asset
+              uses: actions/upload-release-asset@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  upload_url: ${{ steps.create_release.outputs.upload_url }}
+                  asset_path: ./aws-ecr-auth-proxy-ubuntu-arm64
+                  asset_name: aws-ecr-auth-proxy-ubuntu-arm64
+                  asset_content_type: application/octet-stream
+
+            - name: Build and push Docker images
+              env:
+                  DOCKER_REPO: ghcr.io/${{ github.repository_owner }}/aws-ecr-auth-proxy
+              run: |
+                  # Build and push AMD64 image
+                  docker buildx build --platform linux/amd64 \
+                    -t $DOCKER_REPO:${{ github.ref_name }}-amd64 \
+                    -t $DOCKER_REPO:latest-amd64 \
+                    --build-arg ARCH=amd64 \
+                    --push .
+
+                  # Build and push ARM64 image
+                  docker buildx build --platform linux/arm64 \
+                    -t $DOCKER_REPO:${{ github.ref_name }}-arm64 \
+                    -t $DOCKER_REPO:latest-arm64 \
+                    --build-arg ARCH=arm64 \
+                   --push .
+
+                  # Create and push multi-arch manifest
+                  docker manifest create $DOCKER_REPO:${{ github.ref_name }} \
+                    $DOCKER_REPO:${{ github.ref_name }}-amd64 \
+                    $DOCKER_REPO:${{ github.ref_name }}-arm64
+                  docker manifest push $DOCKER_REPO:${{ github.ref_name }}
+
+                  docker manifest create $DOCKER_REPO:latest \
+                    $DOCKER_REPO:latest-amd64 \
+                    $DOCKER_REPO:latest-arm64
+                  docker manifest push $DOCKER_REPO:latest

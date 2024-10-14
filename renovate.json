@@ -1,0 +1,24 @@
+{
+    "extends": ["config:base"],
+    "automerge": true,
+	"automergeType": "branch",
+	"requiredStatusChecks": ["Lint and Test"],
+	"packageRules": [
+		{
+			"matchUpdateTypes": ["minor", "patch"],
+			"matchCurrentVersion": "!/^0/",
+			"automerge": true
+		},
+		{
+			"matchManagers": ["github-actions"],
+			"groupName": "GitHub Actions",
+			"automerge": true
+		},
+		{
+			"matchPackageNames": ["golang"],
+			"matchManagers": ["golang-version"],
+			"groupName": "Go",
+			"automerge": true
+		}
+	]
+}
