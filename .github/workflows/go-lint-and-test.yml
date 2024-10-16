@@ -7,9 +7,10 @@ on:
         branches: [main]
 
 jobs:
-    lint-and-test: # This is the job ID
+    lint-and-test:
         name: Lint and Test
         runs-on: ubuntu-latest
+        timeout-minutes: 5
         steps:
             - uses: actions/checkout@v4
             - name: Set up Go
@@ -26,6 +27,7 @@ jobs:
               with:
                   # renovate: datasource=github-releases depName=golangci/golangci-lint
                   version: v1.56.2
+                  args: --verbose --concurrency=4
 
             - name: Run tests
               run: go test -v ./...
