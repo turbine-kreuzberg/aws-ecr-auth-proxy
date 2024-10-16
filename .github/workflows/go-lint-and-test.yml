@@ -15,8 +15,8 @@ jobs:
             - name: Set up Go
               uses: actions/setup-go@v5
               with:
-                  # renovate: datasource=github-releases depName=golang/go
-                  go-version: "1.23"
+                  # renovate: datasource=github-tags depName=golang/go
+                  go-version: '1.23.2'
 
             - name: Print Go version
               run: go version
