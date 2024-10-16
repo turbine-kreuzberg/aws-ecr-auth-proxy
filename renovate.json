@@ -1,5 +1,5 @@
 {
-	"extends": ["config:base"],
+	"extends": ["config:best-practices"],
 	"automerge": true,
 	"automergeType": "branch",
 	"requiredStatusChecks": ["Lint and Test"],
