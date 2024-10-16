@@ -9,6 +9,7 @@ import (
 )
 
 func ecrClient() (*ecr.Client, error) {
+	// TODO use app ctx
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithEC2IMDSRegion())
 	if err != nil {
 		return nil, fmt.Errorf("unable to load SDK config: %s ", err)
