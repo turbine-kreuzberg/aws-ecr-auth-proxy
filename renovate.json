@@ -4,6 +4,21 @@
 	"automergeType": "branch",
 	"requiredStatusChecks": ["Lint and Test"],
 	"packageRules": [
+		
+				{
+			"customManagers": [
+				{
+					"customType": "regex",
+					"fileMatch": ["^.github/workflows/.*\\.ya?ml$"],
+					"matchStrings": [
+						"# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+.*?version: \"?(?<currentValue>.*?)\"?"
+					],
+					"extractVersionTemplate": "^v?(?<version>.*)$",
+					"versioningTemplate": "{{#if (containsString depName 'golangci-lint')}}semver{{else}}golang{{/if}}"
+				}
+			]
+		},
+		
 		{
 			"matchUpdateTypes": ["minor", "patch"],
 			"matchCurrentVersion": "!/^0/",
