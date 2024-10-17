@@ -100,16 +100,16 @@ jobs:
 
             - name: Save Docker images
               run: |
-                  docker save aws-ecr-auth-proxy:test-amd64 > /tmp/aws-ecr-auth-proxy-amd64.tar
-                  docker save aws-ecr-auth-proxy:test-arm64 > /tmp/aws-ecr-auth-proxy-arm64.tar
+                  docker save aws-ecr-auth-proxy:test-amd64 > aws-ecr-auth-proxy-amd64.tar
+                  docker save aws-ecr-auth-proxy:test-arm64 > aws-ecr-auth-proxy-arm64.tar
 
             - name: Upload Docker images
               uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4
               with:
                   name: docker-images
                   path: |
-                      /tmp/aws-ecr-auth-proxy-amd64.tar
-                      /tmp/aws-ecr-auth-proxy-arm64.tar
+                      aws-ecr-auth-proxy-amd64.tar
+                      aws-ecr-auth-proxy-arm64.tar
 
     release:
         name: Create Release
@@ -171,8 +171,8 @@ jobs:
               env:
                   DOCKER_REPO: ghcr.io/${{ github.repository_owner }}/aws-ecr-auth-proxy
               run: |
-                  docker load < /tmp/aws-ecr-auth-proxy-amd64.tar
-                  docker load < /tmp/aws-ecr-auth-proxy-arm64.tar
+                  docker load < aws-ecr-auth-proxy-amd64.tar
+                  docker load < aws-ecr-auth-proxy-arm64.tar
 
                   docker tag aws-ecr-auth-proxy:test-amd64 $DOCKER_REPO:${{ github.ref_name }}-amd64
                   docker tag aws-ecr-auth-proxy:test-amd64 $DOCKER_REPO:latest-amd64
