@@ -44,8 +44,8 @@ jobs:
 
             - name: Test binary execution (AMD64)
               run: |
-                  chmod +x aws-ecr-auth-proxy-ubuntu-amd64
-                  ./aws-ecr-auth-proxy-ubuntu-amd64 version
+                  chmod +x aws-ecr-auth-proxy-amd64
+                  ./aws-ecr-auth-proxy-amd64 version
 
             - name: Set up QEMU
               uses: docker/setup-qemu-action@v3
