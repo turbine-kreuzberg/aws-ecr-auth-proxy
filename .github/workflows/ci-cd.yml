@@ -1,0 +1,182 @@
+name: CI/CD
+
+on:
+    push:
+        branches: [main]
+        tags:
+            - "v*"
+    pull_request:
+        branches: [main]
+
+jobs:
+    lint-and-test:
+        name: Lint and Test
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
+            - name: Set up Go
+              uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
+              with:
+                  # renovate: datasource=github-tags depName=golang/go
+                  go-version: "1.23.2"
+
+            - name: Print Go version
+              run: go version
+
+            - name: Run golangci-lint
+              uses: golangci/golangci-lint-action@971e284b6050e8a5849b72094c50ab08da042db8 # v6
+              with:
+                  # renovate: datasource=github-releases depName=golangci/golangci-lint
+                  version: v1.61.0
+                  args: --verbose --concurrency=2
+
+            - name: Run tests
+              run: go test -v ./...
+
+    build:
+        name: Build Binaries and Docker Images
+        needs: lint-and-test
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
+
+            - name: Set up Go
+              uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
+              with:
+                  # renovate: datasource=github-tags depName=golang/go
+                  go-version: "1.23.2"
+
+            - name: Set git variables
+              id: git_vars
+              run: |
+                  echo "GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+                  echo "GIT_REF=$(git describe --tags --always)" >> $GITHUB_OUTPUT
+
+            - name: Build binaries
+              run: |
+                  CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.gitHash=${{ steps.git_vars.outputs.GIT_HASH }} -X main.gitRef=${{ steps.git_vars.outputs.GIT_REF }}" -o aws-ecr-auth-proxy-amd64 ./cmd/main.go
+                  CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "-X main.gitHash=${{ steps.git_vars.outputs.GIT_HASH }} -X main.gitRef=${{ steps.git_vars.outputs.GIT_REF }}" -o aws-ecr-auth-proxy-arm64 ./cmd/main.go
+
+            - name: Set up QEMU
+              uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3 # v3
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3
+
+            - name: Build Docker images
+              run: |
+                  # Build AMD64 image
+                  docker buildx build --platform linux/amd64 \
+                    -t aws-ecr-auth-proxy:test-amd64 \
+                    --build-arg ARCH=amd64 \
+                    -f Dockerfile \
+                    --load .
+
+                  # Build ARM64 image
+                  docker buildx build --platform linux/arm64 \
+                    -t aws-ecr-auth-proxy:test-arm64 \
+                    --build-arg ARCH=arm64 \
+                    -f Dockerfile \
+                    --load .
+
+            - name: Upload binaries
+              uses: actions/upload-artifact@v4
+              with:
+                  name: binaries
+                  path: |
+                      aws-ecr-auth-proxy-amd64
+                      aws-ecr-auth-proxy-arm64
+
+            - name: Upload Docker images
+              uses: actions/upload-artifact@v4
+              with:
+                  name: docker-images
+                  path: |
+                      /tmp/aws-ecr-auth-proxy-amd64.tar
+                      /tmp/aws-ecr-auth-proxy-arm64.tar
+              run: |
+                  docker save aws-ecr-auth-proxy:test-amd64 > /tmp/aws-ecr-auth-proxy-amd64.tar
+                  docker save aws-ecr-auth-proxy:test-arm64 > /tmp/aws-ecr-auth-proxy-arm64.tar
+
+    release:
+        name: Create Release
+        needs: build
+        if: startsWith(github.ref, 'refs/tags/')
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
+
+            - name: Download binaries
+              uses: actions/download-artifact@v4
+              with:
+                  name: binaries
+
+            - name: Download Docker images
+              uses: actions/download-artifact@v4
+              with:
+                  name: docker-images
+
+            - name: Create Release
+              id: create_release
+              uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e # v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  tag_name: ${{ github.ref }}
+                  release_name: Release ${{ github.ref }}
+                  draft: false
+                  prerelease: false
+
+            - name: Upload AMD64 Asset
+              uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  upload_url: ${{ steps.create_release.outputs.upload_url }}
+                  asset_path: ./aws-ecr-auth-proxy-amd64
+                  asset_name: aws-ecr-auth-proxy-amd64
+                  asset_content_type: application/octet-stream
+
+            - name: Upload ARM64 Asset
+              uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  upload_url: ${{ steps.create_release.outputs.upload_url }}
+                  asset_path: ./aws-ecr-auth-proxy-arm64
+                  asset_name: aws-ecr-auth-proxy-arm64
+                  asset_content_type: application/octet-stream
+
+            - name: Login to GitHub Container Registry
+              uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.repository_owner }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Push and create multi-arch Docker images
+              env:
+                  DOCKER_REPO: ghcr.io/${{ github.repository_owner }}/aws-ecr-auth-proxy
+              run: |
+                  docker load < /tmp/aws-ecr-auth-proxy-amd64.tar
+                  docker load < /tmp/aws-ecr-auth-proxy-arm64.tar
+
+                  docker tag aws-ecr-auth-proxy:test-amd64 $DOCKER_REPO:${{ github.ref_name }}-amd64
+                  docker tag aws-ecr-auth-proxy:test-amd64 $DOCKER_REPO:latest-amd64
+                  docker tag aws-ecr-auth-proxy:test-arm64 $DOCKER_REPO:${{ github.ref_name }}-arm64
+                  docker tag aws-ecr-auth-proxy:test-arm64 $DOCKER_REPO:latest-arm64
+
+                  docker push $DOCKER_REPO:${{ github.ref_name }}-amd64
+                  docker push $DOCKER_REPO:latest-amd64
+                  docker push $DOCKER_REPO:${{ github.ref_name }}-arm64
+                  docker push $DOCKER_REPO:latest-arm64
+
+                  docker manifest create $DOCKER_REPO:${{ github.ref_name }} \
+                    $DOCKER_REPO:${{ github.ref_name }}-amd64 \
+                    $DOCKER_REPO:${{ github.ref_name }}-arm64
+                  docker manifest push $DOCKER_REPO:${{ github.ref_name }}
+
+                  docker manifest create $DOCKER_REPO:latest \
+                    $DOCKER_REPO:latest-amd64 \
+                    $DOCKER_REPO:latest-arm64
+                  docker manifest push $DOCKER_REPO:latest
