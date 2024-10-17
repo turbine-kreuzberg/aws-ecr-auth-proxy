@@ -7,6 +7,9 @@ on:
             - "v*"
     pull_request:
         branches: [main]
+    create:
+        tags:
+            - "v*"
 
 jobs:
     lint-and-test:
@@ -58,7 +61,7 @@ jobs:
 
             - name: Set up QEMU
               uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf # v3
-              
+
             - name: Test binaries
               run: |
                   chmod +x aws-ecr-auth-proxy-amd64
