@@ -31,6 +31,17 @@ jobs:
             - name: Run tests
               run: go test -v ./...
 
+            - name: Set git variables
+              id: git_vars
+              run: |
+                  echo "GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+                  echo "GIT_REF=$(git describe --tags --always)" >> $GITHUB_OUTPUT
+
+            - name: Build binaries with version info
+              run: |
+                  CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.gitHash=${{ steps.git_vars.outputs.GIT_HASH }} -X main.gitRef=${{ steps.git_vars.outputs.GIT_REF }}" -o aws-ecr-auth-proxy-amd64 ./cmd/main.go
+                  CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "-X main.gitHash=${{ steps.git_vars.outputs.GIT_HASH }} -X main.gitRef=${{ steps.git_vars.outputs.GIT_REF }}" -o aws-ecr-auth-proxy-arm64 ./cmd/main.go
+
             - name: Build binaries
               run: |
                   GOOS=linux GOARCH=amd64 go build -o aws-ecr-auth-proxy-ubuntu-amd64 ./cmd/main.go
