@@ -1,14 +1,11 @@
 {
-	"extends": [
-		"config:best-practices"
-	],
+	"extends": ["config:best-practices"],
 	"platformAutomerge": true,
+	"rebaseWhen": "conflicted",
 	"customManagers": [
 		{
 			"customType": "regex",
-			"fileMatch": [
-				"^\\.github/workflows/.*\\.ya?ml$"
-			],
+			"fileMatch": ["^\\.github/workflows/.*\\.ya?ml$"],
 			"matchStrings": [
 				"# renovate: datasource=(?<datasource>[a-z-.]+?) depName=(?<depName>[^\\s]+?)\\s+.*?version: [\"']?(?<currentValue>v?\\d+(?:\\.\\d+){1,2})[\"']?"
 			],
