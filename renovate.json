@@ -2,8 +2,7 @@
 	"extends": [
 		"config:best-practices"
 	],
-	"automerge": true,
-	"automergeType": "branch",
+	"platformAutomerge": true,
 	"customManagers": [
 		{
 			"customType": "regex",
@@ -14,23 +13,6 @@
 				"# renovate: datasource=(?<datasource>[a-z-.]+?) depName=(?<depName>[^\\s]+?)\\s+.*?version: [\"']?(?<currentValue>v?\\d+(?:\\.\\d+){1,2})[\"']?"
 			],
 			"extractVersionTemplate": "^(?:go)?(?<version>.*)$"
-		}
-	],
-	"packageRules": [
-		{
-			"matchUpdateTypes": [
-				"minor",
-				"patch"
-			],
-			"matchCurrentVersion": "!/^0/",
-			"automerge": true
-		},
-		{
-			"matchManagers": [
-				"github-actions"
-			],
-			"groupName": "GitHub Actions",
-			"automerge": true
 		}
 	]
 }
