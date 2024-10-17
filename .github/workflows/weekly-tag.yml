@@ -13,19 +13,29 @@ jobs:
         uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
         with:
           fetch-depth: 0  # Fetch all history for all tags and branches
-
-      - name: Check for changes
+      - name: Check for changes and get latest tag
         id: check_changes
         run: |
-          git diff --quiet @{1.week.ago} HEAD || echo "changes=true" >> $GITHUB_OUTPUT
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$latest_tag" ]; then
+            echo "No previous tag found. Will create first tag."
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "latest_version=0" >> $GITHUB_OUTPUT
+          else
+            if git diff --quiet $latest_tag HEAD; then
+              echo "No changes since last tag."
+            else
+              echo "changes=true" >> $GITHUB_OUTPUT
+              latest_version=${latest_tag#v}
+              echo "latest_version=$latest_version" >> $GITHUB_OUTPUT
+            fi
+          fi
 
-      - name: Get latest version
-        id: get_latest_version
+      - name: Calculate new version
+        id: calc_version
         if: steps.check_changes.outputs.changes == 'true'
         run: |
-          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0")
-          latest_version=${latest_tag#v}
-          new_version=$((latest_version + 1))
+          new_version=$((steps.check_changes.outputs.latest_version + 1))
           echo "new_version=$new_version" >> $GITHUB_OUTPUT
 
       - name: Create and push new tag
@@ -33,5 +43,5 @@ jobs:
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git tag -a v${{ steps.get_latest_version.outputs.new_version }} -m "Weekly tag v${{ steps.get_latest_version.outputs.new_version }}"
-          git push origin v${{ steps.get_latest_version.outputs.new_version }}
+          git tag v${{ steps.calc_version.outputs.new_version }}
+          git push origin v${{ steps.calc_version.outputs.new_version }}
