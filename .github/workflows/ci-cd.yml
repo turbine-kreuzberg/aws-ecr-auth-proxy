@@ -56,6 +56,13 @@ jobs:
                   CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.gitHash=${{ steps.git_vars.outputs.GIT_HASH }} -X main.gitRef=${{ steps.git_vars.outputs.GIT_REF }}" -o aws-ecr-auth-proxy-amd64 ./cmd/main.go
                   CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "-X main.gitHash=${{ steps.git_vars.outputs.GIT_HASH }} -X main.gitRef=${{ steps.git_vars.outputs.GIT_REF }}" -o aws-ecr-auth-proxy-arm64 ./cmd/main.go
 
+            - name: Test binaries
+              run: |
+                  chmod +x aws-ecr-auth-proxy-amd64
+                  chmod +x aws-ecr-auth-proxy-arm64
+                  ./aws-ecr-auth-proxy-amd64 version
+                  docker run --rm -v $(pwd):/workspace -w /workspace arm64v8/ubuntu ./aws-ecr-auth-proxy-arm64 version
+
             - name: Set up QEMU
               uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3 # v3
 
@@ -78,6 +85,11 @@ jobs:
                     -f Dockerfile \
                     --load .
 
+            - name: Test Docker images
+              run: |
+                  docker run --rm aws-ecr-auth-proxy:test-amd64 /app/aws-ecr-auth-proxy version
+                  docker run --rm --platform linux/arm64 aws-ecr-auth-proxy:test-arm64 /app/aws-ecr-auth-proxy version
+
             - name: Upload binaries
               uses: actions/upload-artifact@v4
               with:
@@ -85,6 +97,11 @@ jobs:
                   path: |
                       aws-ecr-auth-proxy-amd64
                       aws-ecr-auth-proxy-arm64
+
+            - name: Save Docker images
+              run: |
+                  docker save aws-ecr-auth-proxy:test-amd64 > /tmp/aws-ecr-auth-proxy-amd64.tar
+                  docker save aws-ecr-auth-proxy:test-arm64 > /tmp/aws-ecr-auth-proxy-arm64.tar
 
             - name: Upload Docker images
               uses: actions/upload-artifact@v4
