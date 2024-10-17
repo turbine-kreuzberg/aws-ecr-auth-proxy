@@ -1,12 +1,15 @@
 {
-	"extends": ["config:best-practices"],
+	"extends": [
+		"config:best-practices"
+	],
 	"automerge": true,
 	"automergeType": "branch",
-	"requiredStatusChecks": ["Lint and Test"],
 	"customManagers": [
 		{
 			"customType": "regex",
-			"fileMatch": ["^\\.github/workflows/.*\\.ya?ml$"],
+			"fileMatch": [
+				"^\\.github/workflows/.*\\.ya?ml$"
+			],
 			"matchStrings": [
 				"# renovate: datasource=(?<datasource>[a-z-.]+?) depName=(?<depName>[^\\s]+?)\\s+.*?version: [\"']?(?<currentValue>v?\\d+(?:\\.\\d+){1,2})[\"']?"
 			],
@@ -15,12 +18,17 @@
 	],
 	"packageRules": [
 		{
-			"matchUpdateTypes": ["minor", "patch"],
+			"matchUpdateTypes": [
+				"minor",
+				"patch"
+			],
 			"matchCurrentVersion": "!/^0/",
 			"automerge": true
 		},
 		{
-			"matchManagers": ["github-actions"],
+			"matchManagers": [
+				"github-actions"
+			],
 			"groupName": "GitHub Actions",
 			"automerge": true
 		}
