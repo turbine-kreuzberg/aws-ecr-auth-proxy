@@ -28,7 +28,6 @@ jobs:
               with:
                   # renovate: datasource=github-releases depName=golangci/golangci-lint
                   version: v1.61.0
-                  args: --verbose --concurrency=2
 
             - name: Run tests
               run: go test -v ./...
