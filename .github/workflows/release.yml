@@ -1,4 +1,4 @@
-name: Release Go Binary and Docker Images for Ubuntu
+name: Release Go Binary and Docker Images
 
 on:
     push:
@@ -36,8 +36,8 @@ jobs:
 
             - name: Build binaries
               run: |
-                  CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.gitHash=${{ steps.git_vars.outputs.GIT_HASH }} -X main.gitRef=${{ steps.git_vars.outputs.GIT_REF }}" -o aws-ecr-auth-proxy-ubuntu-amd64 ./cmd/main.go
-                  CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "-X main.gitHash=${{ steps.git_vars.outputs.GIT_HASH }} -X main.gitRef=${{ steps.git_vars.outputs.GIT_REF }}" -o aws-ecr-auth-proxy-ubuntu-arm64 ./cmd/main.go
+                  CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.gitHash=${{ steps.git_vars.outputs.GIT_HASH }} -X main.gitRef=${{ steps.git_vars.outputs.GIT_REF }}" -o aws-ecr-auth-proxy-amd64 ./cmd/main.go
+                  CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "-X main.gitHash=${{ steps.git_vars.outputs.GIT_HASH }} -X main.gitRef=${{ steps.git_vars.outputs.GIT_REF }}" -o aws-ecr-auth-proxy-arm64 ./cmd/main.go
 
             - name: Create Release
               id: create_release
@@ -56,18 +56,18 @@ jobs:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
                   upload_url: ${{ steps.create_release.outputs.upload_url }}
-                  asset_path: ./aws-ecr-auth-proxy-ubuntu-amd64
-                  asset_name: aws-ecr-auth-proxy-ubuntu-amd64
+                  asset_path: ./aws-ecr-auth-proxy-amd64
+                  asset_name: aws-ecr-auth-proxy-amd64
                   asset_content_type: application/octet-stream
 
-            - name: Upload Ubuntu ARM64 Asset
+            - name: Upload ARM64 Asset
               uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
                   upload_url: ${{ steps.create_release.outputs.upload_url }}
-                  asset_path: ./aws-ecr-auth-proxy-ubuntu-arm64
-                  asset_name: aws-ecr-auth-proxy-ubuntu-arm64
+                  asset_path: ./aws-ecr-auth-proxy-arm64
+                  asset_name: aws-ecr-auth-proxy-arm64
                   asset_content_type: application/octet-stream
 
             - name: Build and push Docker images

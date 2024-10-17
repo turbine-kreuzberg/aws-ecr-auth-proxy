@@ -9,7 +9,7 @@ WORKDIR /app
 
 # Copy the pre-built binary into the container
 ARG ARCH=amd64
-COPY aws-ecr-auth-proxy-ubuntu-${ARCH} /app/aws-ecr-auth-proxy
+COPY aws-ecr-auth-proxy-${ARCH} /app/aws-ecr-auth-proxy
 
 # Make the binary executable
 RUN chmod +x /app/aws-ecr-auth-proxy
