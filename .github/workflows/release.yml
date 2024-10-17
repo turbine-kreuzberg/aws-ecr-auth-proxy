@@ -79,6 +79,7 @@ jobs:
                     -t $DOCKER_REPO:${{ github.ref_name }}-amd64 \
                     -t $DOCKER_REPO:latest-amd64 \
                     --build-arg ARCH=amd64 \
+                    -f Dockerfile \
                     --push .
 
                   # Build and push ARM64 image
@@ -86,7 +87,8 @@ jobs:
                     -t $DOCKER_REPO:${{ github.ref_name }}-arm64 \
                     -t $DOCKER_REPO:latest-arm64 \
                     --build-arg ARCH=arm64 \
-                   --push .
+                    -f Dockerfile \
+                    --push .
 
                   # Create and push multi-arch manifest
                   docker manifest create $DOCKER_REPO:${{ github.ref_name }} \
