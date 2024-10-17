@@ -110,9 +110,6 @@ jobs:
                   path: |
                       /tmp/aws-ecr-auth-proxy-amd64.tar
                       /tmp/aws-ecr-auth-proxy-arm64.tar
-              run: |
-                  docker save aws-ecr-auth-proxy:test-amd64 > /tmp/aws-ecr-auth-proxy-amd64.tar
-                  docker save aws-ecr-auth-proxy:test-arm64 > /tmp/aws-ecr-auth-proxy-arm64.tar
 
     release:
         name: Create Release
