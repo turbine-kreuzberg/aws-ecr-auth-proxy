@@ -30,3 +30,41 @@ jobs:
 
             - name: Run tests
               run: go test -v ./...
+
+            - name: Build binaries
+              run: |
+                  GOOS=linux GOARCH=amd64 go build -o aws-ecr-auth-proxy-ubuntu-amd64 ./cmd/main.go
+                  GOOS=linux GOARCH=arm64 go build -o aws-ecr-auth-proxy-ubuntu-arm64 ./cmd/main.go
+
+            - name: Test binary execution (AMD64)
+              run: |
+                  chmod +x aws-ecr-auth-proxy-ubuntu-amd64
+                  ./aws-ecr-auth-proxy-ubuntu-amd64 version
+
+            - name: Set up QEMU
+              uses: docker/setup-qemu-action@v3
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Build and test Docker images
+              run: |
+                  # Build AMD64 image
+                  docker buildx build --platform linux/amd64 \
+                    -t aws-ecr-auth-proxy:test-amd64 \
+                    --build-arg ARCH=amd64 \
+                    -f Dockerfile \
+                    --load .
+
+                  # Test AMD64 image
+                  docker run --rm aws-ecr-auth-proxy:test-amd64 /app/aws-ecr-auth-proxy version
+
+                  # Build ARM64 image
+                  docker buildx build --platform linux/arm64 \
+                    -t aws-ecr-auth-proxy:test-arm64 \
+                    --build-arg ARCH=arm64 \
+                    -f Dockerfile \
+                    --load .
+
+                  # Test ARM64 image
+                  docker run --rm --platform linux/arm64 aws-ecr-auth-proxy:test-arm64 /app/aws-ecr-auth-proxy version
