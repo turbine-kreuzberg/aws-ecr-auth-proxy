@@ -7,9 +7,25 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
 )
+
+func matchesECRRule(ctx context.Context, svc *ecr.Client, path string) (bool, error) {
+	result, err := svc.DescribePullThroughCacheRules(ctx, &ecr.DescribePullThroughCacheRulesInput{})
+	if err != nil {
+		return false, fmt.Errorf("failed to describe pull-through cache rules: %w", err)
+	}
+
+	for _, rule := range result.PullThroughCacheRules {
+		if strings.HasPrefix(path, *rule.EcrRepositoryPrefix) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
 
 func RunHttpServer(ctx context.Context, port int) error {
 	// Create an ECR client
@@ -74,6 +90,20 @@ func newProxy(ecrURL *url.URL, authToken string) *httputil.ReverseProxy {
 // handler forwards incoming requests to the ECR endpoint with proper authorization headers.
 func handler(ctx context.Context, svc *ecr.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		matches, err := matchesECRRule(ctx, svc, r.URL.Path)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to check ECR rules: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		if !matches {
+			// Fallback to registry-1.docker.io
+			dockerURL, _ := url.Parse("https://registry-1.docker.io")
+			proxy := newProxy(dockerURL, "")
+			proxy.ServeHTTP(w, r)
+			return
+		}
+
 		// Retrieve a fresh token and the ECR domain.
 		authToken, proxyEndpoint, err := getECRAuthToken(ctx, svc)
 		if err != nil {
