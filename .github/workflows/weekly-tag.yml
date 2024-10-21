@@ -17,7 +17,7 @@ jobs:
             - name: Check for changes and get latest tag
               id: check_changes
               run: |
-                  latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+                  latest_tag=$(git tag | sort -r | head -n 1 || echo "")
                   if [ -z "$latest_tag" ]; then
                     echo "No previous tag found. Will create first tag."
                     echo "changes=true" >> $GITHUB_OUTPUT
