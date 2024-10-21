@@ -4,9 +4,13 @@ on:
     push:
         branches: [main]
         tags:
-            - "*"
+            - "v*"
     pull_request:
         branches: [main]
+    workflow_run:
+        workflows: ["Weekly Tag"]
+        types:
+            - completed
 
 jobs:
     lint-and-test:
@@ -14,6 +18,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
+
             - name: Set up Go
               uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5
               with:
@@ -114,10 +119,22 @@ jobs:
     release:
         name: Create Release
         needs: build
-        if: startsWith(github.ref, 'refs/tags/')
+        if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || (github.event.workflow_run.workflow == 'Weekly Tag' && github.event.workflow_run.conclusion == 'success')
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
+
+            - name: Determine version number
+              id: version
+              run: |
+                  if [[ ${{ github.event_name }} == 'push' && ${{ github.ref }} == refs/tags/* ]]; then
+                    VERSION=${GITHUB_REF#refs/tags/v}
+                  else
+                    git fetch --tags
+                    VERSION=$(git describe --tags --abbrev=0)
+                    VERSION=${VERSION#v}
+                  fi
+                  echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
             - name: Download binaries
               uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
@@ -135,8 +152,8 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
-                  tag_name: ${{ github.ref }}
-                  release_name: Release ${{ github.ref }}
+                  tag_name: v${{ steps.version.outputs.VERSION }}
+                  release_name: Release v${{ steps.version.outputs.VERSION }}
                   draft: false
                   prerelease: false
 
@@ -147,7 +164,7 @@ jobs:
               with:
                   upload_url: ${{ steps.create_release.outputs.upload_url }}
                   asset_path: ./aws-ecr-auth-proxy-amd64
-                  asset_name: aws-ecr-auth-proxy-amd64
+                  asset_name: aws-ecr-auth-proxy-amd64-v${{ steps.version.outputs.VERSION }}
                   asset_content_type: application/octet-stream
 
             - name: Upload ARM64 Asset
@@ -157,7 +174,7 @@ jobs:
               with:
                   upload_url: ${{ steps.create_release.outputs.upload_url }}
                   asset_path: ./aws-ecr-auth-proxy-arm64
-                  asset_name: aws-ecr-auth-proxy-arm64
+                  asset_name: aws-ecr-auth-proxy-arm64-v${{ steps.version.outputs.VERSION }}
                   asset_content_type: application/octet-stream
 
             - name: Login to GitHub Container Registry
@@ -174,20 +191,20 @@ jobs:
                   docker load < aws-ecr-auth-proxy-amd64.tar
                   docker load < aws-ecr-auth-proxy-arm64.tar
 
-                  docker tag aws-ecr-auth-proxy:test-amd64 $DOCKER_REPO:${{ github.ref_name }}-amd64
+                  docker tag aws-ecr-auth-proxy:test-amd64 $DOCKER_REPO:v${{ steps.version.outputs.VERSION }}-amd64
                   docker tag aws-ecr-auth-proxy:test-amd64 $DOCKER_REPO:latest-amd64
-                  docker tag aws-ecr-auth-proxy:test-arm64 $DOCKER_REPO:${{ github.ref_name }}-arm64
+                  docker tag aws-ecr-auth-proxy:test-arm64 $DOCKER_REPO:v${{ steps.version.outputs.VERSION }}-arm64
                   docker tag aws-ecr-auth-proxy:test-arm64 $DOCKER_REPO:latest-arm64
 
-                  docker push $DOCKER_REPO:${{ github.ref_name }}-amd64
+                  docker push $DOCKER_REPO:v${{ steps.version.outputs.VERSION }}-amd64
                   docker push $DOCKER_REPO:latest-amd64
-                  docker push $DOCKER_REPO:${{ github.ref_name }}-arm64
+                  docker push $DOCKER_REPO:v${{ steps.version.outputs.VERSION }}-arm64
                   docker push $DOCKER_REPO:latest-arm64
 
-                  docker manifest create $DOCKER_REPO:${{ github.ref_name }} \
-                    $DOCKER_REPO:${{ github.ref_name }}-amd64 \
-                    $DOCKER_REPO:${{ github.ref_name }}-arm64
-                  docker manifest push $DOCKER_REPO:${{ github.ref_name }}
+                  docker manifest create $DOCKER_REPO:v${{ steps.version.outputs.VERSION }} \
+                    $DOCKER_REPO:v${{ steps.version.outputs.VERSION }}-amd64 \
+                    $DOCKER_REPO:v${{ steps.version.outputs.VERSION }}-arm64
+                  docker manifest push $DOCKER_REPO:v${{ steps.version.outputs.VERSION }}
 
                   docker manifest create $DOCKER_REPO:latest \
                     $DOCKER_REPO:latest-amd64 \

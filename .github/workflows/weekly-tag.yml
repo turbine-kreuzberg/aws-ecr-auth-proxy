@@ -13,6 +13,7 @@ jobs:
               uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4
               with:
                   fetch-depth: 0 # Fetch all history for all tags and branches
+
             - name: Check for changes and get latest tag
               id: check_changes
               run: |
@@ -24,12 +25,19 @@ jobs:
                   else
                     if git diff --quiet $latest_tag HEAD; then
                       echo "No changes since last tag."
+                      echo "changes=false" >> $GITHUB_OUTPUT
                     else
                       echo "changes=true" >> $GITHUB_OUTPUT
                       latest_version=${latest_tag#v}
                       echo "latest_version=$latest_version" >> $GITHUB_OUTPUT
                     fi
                   fi
+
+            - name: Exit if no changes
+              if: steps.check_changes.outputs.changes != 'true'
+              run: |
+                  echo "No changes detected since last tag. Exiting workflow."
+                  exit 78
 
             - name: Calculate new version
               id: calc_version
@@ -45,4 +53,4 @@ jobs:
                   git config user.name github-actions
                   git config user.email github-actions@github.com
                   git tag v${{ steps.calc_version.outputs.new_version }}
-                  git push https://x-access-token:${{ secrets.PERSONAL_ACCESS_TOKEN }}@github.com/${{ github.repository }}.git v${{ steps.calc_version.outputs.new_version }}
+                  git push origin v${{ steps.calc_version.outputs.new_version }}
