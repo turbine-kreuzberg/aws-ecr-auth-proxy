@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
 )
@@ -15,6 +16,11 @@ import (
 var containerdFS embed.FS
 
 func InstallContainerdConfiguration(ctx context.Context, port int) error {
+	err := updateContainerdConfigToml()
+	if err != nil {
+		return fmt.Errorf("failed to update containerd config.toml: %w", err)
+	}
+
 	svc, err := ecrClient()
 	if err != nil {
 		return err
@@ -31,6 +37,32 @@ func InstallContainerdConfiguration(ctx context.Context, port int) error {
 			return err
 		}
 	}
+
+	return nil
+}
+
+func updateContainerdConfigToml() error {
+	configPath := "/etc/containerd/config.toml"
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		return fmt.Errorf("failed to read config.toml: %w", err)
+	}
+
+	configToAdd := `
+[plugins."io.containerd.grpc.v1.cri".registry]
+config_path = "/etc/containerd/certs.d:/etc/docker/certs.d"`
+
+	if strings.Contains(string(content), configToAdd) {
+		log.Printf("Registry configuration already present in %s", configPath)
+		return nil
+	}
+
+	updatedContent := string(content) + configToAdd
+	err = os.WriteFile(configPath, []byte(updatedContent), 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write updated config.toml: %w", err)
+	}
+	log.Printf("Updated %s with registry configuration", configPath)
 
 	return nil
 }

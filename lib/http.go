@@ -70,6 +70,7 @@ func getECRAuthToken(ctx context.Context, svc *ecr.Client) (string, string, erro
 		return "", "", fmt.Errorf("no authorization data found")
 	}
 
+	// TODO cache the token and proxyEndpoint for some time
 	token := *result.AuthorizationData[0].AuthorizationToken
 	proxyEndpoint := *result.AuthorizationData[0].ProxyEndpoint
 	return token, proxyEndpoint, nil
