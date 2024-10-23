@@ -86,7 +86,7 @@ func newProxy(ecrURL *url.URL, authToken string, prefixes map[string]string) *ht
 		// Check if the request path starts with any of the pull-through cache prefixes
 		shouldModify := true
 		for _, prefix := range prefixes {
-			if strings.HasPrefix(req.URL.Path, "/"+prefix) {
+			if strings.HasPrefix(req.URL.Path, "/"+prefix) || strings.HasPrefix(req.URL.Path, "/v2/"+prefix) {
 				shouldModify = false
 				break
 			}
@@ -95,7 +95,13 @@ func newProxy(ecrURL *url.URL, authToken string, prefixes map[string]string) *ht
 		// If the path doesn't start with any prefix, prepend the prefix of dockerhub
 		if shouldModify {
 			dockerHubPrefix := prefixes["registry-1.docker.io"]
-			req.URL.Path = strings.Replace(req.URL.Path, "/v2/", "/v2/"+dockerHubPrefix, 1)
+			if strings.HasPrefix(req.URL.Path, "/v2/") {
+				// containerd
+				req.URL.Path = strings.Replace(req.URL.Path, "/v2/", "/v2/"+dockerHubPrefix, 1)
+			} else {
+				// crio
+				req.URL.Path = "/" + strings.TrimSuffix(dockerHubPrefix, "/") + req.URL.Path
+			}
 		}
 
 		log.Printf("Modified request path: %s", req.URL.Path)
