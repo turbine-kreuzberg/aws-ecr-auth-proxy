@@ -12,19 +12,19 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
 )
 
-func matchesECRRule(ctx context.Context, svc *ecr.Client, path string) (bool, error) {
+func fetchDockerHubPrefix(ctx context.Context, svc *ecr.Client) (string, error) {
 	result, err := svc.DescribePullThroughCacheRules(ctx, &ecr.DescribePullThroughCacheRulesInput{})
 	if err != nil {
-		return false, fmt.Errorf("failed to describe pull-through cache rules: %w", err)
+		return "", fmt.Errorf("failed to describe pull-through cache rules: %v", err)
 	}
 
 	for _, rule := range result.PullThroughCacheRules {
-		if strings.HasPrefix(path, *rule.EcrRepositoryPrefix) {
-			return true, nil
+		if *rule.UpstreamRegistryUrl == "registry-1.docker.io" {
+			return *rule.EcrRepositoryPrefix, nil
 		}
 	}
 
-	return false, nil
+	return "", fmt.Errorf("no Docker Hub pull-through cache rule found")
 }
 
 func RunHttpServer(ctx context.Context, port int) error {
@@ -34,8 +34,14 @@ func RunHttpServer(ctx context.Context, port int) error {
 		return fmt.Errorf("unable to load SDK config, %v", err)
 	}
 
+	// Fetch Docker Hub prefix
+	dockerHubPrefix, err := fetchDockerHubPrefix(ctx, svc)
+	if err != nil {
+		return fmt.Errorf("failed to fetch Docker Hub prefix: %v", err)
+	}
+
 	// Setup HTTP server
-	http.HandleFunc("/", handler(ctx, svc))
+	http.HandleFunc("/", handler(ctx, svc, dockerHubPrefix))
 
 	addr := fmt.Sprintf("127.0.0.1:%d", port)
 
@@ -67,12 +73,17 @@ func getECRAuthToken(ctx context.Context, svc *ecr.Client) (string, string, erro
 }
 
 // newProxy creates a new ReverseProxy that forwards requests to the ECR domain.
-func newProxy(ecrURL *url.URL, authToken string) *httputil.ReverseProxy {
+func newProxy(ecrURL *url.URL, authToken string, dockerHubPrefix string) *httputil.ReverseProxy {
 	proxy := httputil.NewSingleHostReverseProxy(ecrURL)
 	originalDirector := proxy.Director
 
 	proxy.Director = func(req *http.Request) {
-		log.Printf("proxy request for %s", req.RequestURI)
+		log.Printf("Original request path: %s", req.URL.Path)
+		if strings.HasPrefix(req.URL.Path, "/v2/") {
+			req.URL.Path = "/" + dockerHubPrefix + req.URL.Path
+		}
+		log.Printf("Modified request path: %s", req.URL.Path)
+
 		originalDirector(req)
 		req.Host = ecrURL.Host
 		req.Header.Set("Authorization", "Basic "+authToken)
@@ -88,22 +99,8 @@ func newProxy(ecrURL *url.URL, authToken string) *httputil.ReverseProxy {
 }
 
 // handler forwards incoming requests to the ECR endpoint with proper authorization headers.
-func handler(ctx context.Context, svc *ecr.Client) http.HandlerFunc {
+func handler(ctx context.Context, svc *ecr.Client, dockerHubPrefix string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		matches, err := matchesECRRule(ctx, svc, r.URL.Path)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to check ECR rules: %v", err), http.StatusInternalServerError)
-			return
-		}
-
-		if !matches {
-			// Fallback to registry-1.docker.io
-			dockerURL, _ := url.Parse("https://registry-1.docker.io")
-			proxy := newProxy(dockerURL, "")
-			proxy.ServeHTTP(w, r)
-			return
-		}
-
 		// Retrieve a fresh token and the ECR domain.
 		authToken, proxyEndpoint, err := getECRAuthToken(ctx, svc)
 		if err != nil {
@@ -119,7 +116,7 @@ func handler(ctx context.Context, svc *ecr.Client) http.HandlerFunc {
 		}
 
 		// Create a new ReverseProxy and forward the request.
-		proxy := newProxy(ecrURL, authToken)
+		proxy := newProxy(ecrURL, authToken, dockerHubPrefix)
 		proxy.ServeHTTP(w, r)
 	}
 }
