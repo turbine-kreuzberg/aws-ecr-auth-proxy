@@ -93,6 +93,10 @@ func newProxy(ecrURL *url.URL, authToken string, prefixes map[string]string) *ht
 			}
 		}
 
+		if req.URL.Path == "/v2/" || req.URL.Path == "/v1/_ping" {
+			shouldModify = false
+		}
+
 		// If the path doesn't start with any prefix, prepend the prefix of dockerhub
 		if shouldModify {
 			dockerHubPrefix := prefixes["registry-1.docker.io"]
