@@ -7,17 +7,15 @@ import (
 	"log"
 	"os"
 	"strings"
-
-	"github.com/aws/aws-sdk-go-v2/service/ecr"
 )
 
-func EtcHostsBlock(ctx context.Context) error {
-	svc, err := ecrClient()
+func EtcHostsBlock(ctx context.Context, prefix string) error {
+	svc, err := ecrClient(prefix)
 	if err != nil {
 		return err
 	}
 
-	result, err := svc.DescribePullThroughCacheRules(ctx, &ecr.DescribePullThroughCacheRulesInput{})
+	result, err := svc.DescribePullThroughCacheRules(ctx)
 	if err != nil {
 		return err
 	}

@@ -11,14 +11,14 @@ import (
 //go:embed systemd.service.tmpl
 var systemdFS embed.FS
 
-func InstallSystemdServiceConfiguraiton(port int) error {
+func InstallSystemdServiceConfiguraiton(port int, prefix string) error {
 	exec, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("lookup path of binary: %s", err)
 	}
 
 	if port != 432 {
-		exec = fmt.Sprintf("%s --port %d", exec, port)
+		exec = fmt.Sprintf("%s --port %d --prefix %s", exec, port, prefix)
 	}
 
 	// Define the data to pass to the template

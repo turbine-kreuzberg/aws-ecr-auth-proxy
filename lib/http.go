@@ -8,12 +8,10 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
-
-	"github.com/aws/aws-sdk-go-v2/service/ecr"
 )
 
-func fetchPullThroughCachePrefixes(ctx context.Context, svc *ecr.Client) (map[string]string, error) {
-	result, err := svc.DescribePullThroughCacheRules(ctx, &ecr.DescribePullThroughCacheRulesInput{})
+func fetchPullThroughCachePrefixes(ctx context.Context, svc *awsClient) (map[string]string, error) {
+	result, err := svc.DescribePullThroughCacheRules(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to describe pull-through cache rules: %v", err)
 	}
@@ -30,9 +28,9 @@ func fetchPullThroughCachePrefixes(ctx context.Context, svc *ecr.Client) (map[st
 	return prefixes, nil
 }
 
-func RunHttpServer(ctx context.Context, port int) error {
+func RunHttpServer(ctx context.Context, port int, prefix string) error {
 	// Create an ECR client
-	svc, err := ecrClient()
+	svc, err := ecrClient(prefix)
 	if err != nil {
 		return fmt.Errorf("unable to load SDK config, %v", err)
 	}
@@ -58,10 +56,8 @@ func RunHttpServer(ctx context.Context, port int) error {
 }
 
 // getECRAuthToken retrieves a fresh token for ECR pull-through cache authorization.
-func getECRAuthToken(ctx context.Context, svc *ecr.Client) (string, string, error) {
-	input := &ecr.GetAuthorizationTokenInput{}
-
-	result, err := svc.GetAuthorizationToken(ctx, input)
+func getECRAuthToken(ctx context.Context, svc *awsClient) (string, string, error) {
+	result, err := svc.GetAuthorizationToken(ctx)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to get ECR authorization token: %w", err)
 	}
@@ -126,7 +122,7 @@ func newProxy(ecrURL *url.URL, authToken string, prefixes map[string]string) *ht
 }
 
 // handler forwards incoming requests to the ECR endpoint with proper authorization headers.
-func handler(ctx context.Context, svc *ecr.Client, prefixes map[string]string) http.HandlerFunc {
+func handler(ctx context.Context, svc *awsClient, prefixes map[string]string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Retrieve a fresh token and the ECR domain.
 		authToken, proxyEndpoint, err := getECRAuthToken(ctx, svc)

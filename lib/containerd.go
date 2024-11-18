@@ -7,20 +7,18 @@ import (
 	"html/template"
 	"log"
 	"os"
-
-	"github.com/aws/aws-sdk-go-v2/service/ecr"
 )
 
 //go:embed containerd.toml.tmpl
 var containerdFS embed.FS
 
-func InstallContainerdConfiguration(ctx context.Context, port int) error {
-	svc, err := ecrClient()
+func InstallContainerdConfiguration(ctx context.Context, port int, prefix string) error {
+	svc, err := ecrClient(prefix)
 	if err != nil {
 		return err
 	}
 
-	result, err := svc.DescribePullThroughCacheRules(ctx, &ecr.DescribePullThroughCacheRulesInput{})
+	result, err := svc.DescribePullThroughCacheRules(ctx)
 	if err != nil {
 		return err
 	}

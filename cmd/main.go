@@ -22,6 +22,11 @@ var (
 		Value: 432,
 		Usage: "Local port to use.",
 	}
+	prefixFlag = &cli.StringFlag{
+		Name:     "Prefix",
+		Usage:    "Only select pull through caches with this prefix.",
+		Required: true,
+	}
 	app = &cli.App{
 		Name:   "AWS pull through credentials proxy",
 		Usage:  "AWS pull through credentials proxy forwards requests to AWS ECR pull through caches and adds a header to allow Access based on the role of the EC2 node.",
@@ -34,6 +39,9 @@ var (
 				Name:   "run",
 				Usage:  "Start the AWS pull through credentials proxy.",
 				Action: run,
+				Flags: []cli.Flag{
+					prefixFlag,
+				},
 			},
 			{
 				Name:  "install",
@@ -56,6 +64,9 @@ var (
 						Action: systemd,
 					},
 				},
+				Flags: []cli.Flag{
+					prefixFlag,
+				},
 			},
 			{
 				Name:   "version",
@@ -75,10 +86,12 @@ func main() {
 
 func run(c *cli.Context) error {
 	port := c.Int(portFlag.Name)
+	prefix := c.String(prefixFlag.Name)
 
 	log.Printf("port: %d", port)
+	log.Printf("prefix: %s", prefix)
 
-	return lib.RunHttpServer(c.Context, port)
+	return lib.RunHttpServer(c.Context, port, prefix)
 }
 
 func version(c *cli.Context) error {
@@ -91,20 +104,24 @@ func version(c *cli.Context) error {
 }
 
 func etcHosts(c *cli.Context) error {
-	return lib.EtcHostsBlock(c.Context)
+	prefix := c.String(prefixFlag.Name)
+	return lib.EtcHostsBlock(c.Context, prefix)
 }
 
 func containerd(c *cli.Context) error {
 	port := c.Int(portFlag.Name)
-	return lib.InstallContainerdConfiguration(c.Context, port)
+	prefix := c.String(prefixFlag.Name)
+	return lib.InstallContainerdConfiguration(c.Context, port, prefix)
 }
 
 func crio(c *cli.Context) error {
 	port := c.Int(portFlag.Name)
-	return lib.InstallCrioConfiguraiton(c.Context, port)
+	prefix := c.String(prefixFlag.Name)
+	return lib.InstallCrioConfiguraiton(c.Context, port, prefix)
 }
 
 func systemd(c *cli.Context) error {
 	port := c.Int(portFlag.Name)
-	return lib.InstallSystemdServiceConfiguraiton(port)
+	prefix := c.String(prefixFlag.Name)
+	return lib.InstallSystemdServiceConfiguraiton(port, prefix)
 }
