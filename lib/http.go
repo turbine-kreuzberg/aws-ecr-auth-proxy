@@ -30,7 +30,7 @@ func fetchPullThroughCachePrefixes(ctx context.Context, svc *awsClient) (map[str
 
 func RunHttpServer(ctx context.Context, port int, prefix string) error {
 	// Create an ECR client
-	svc, err := ecrClient(prefix)
+	svc, err := ecrClient(ctx, prefix)
 	if err != nil {
 		return fmt.Errorf("unable to load SDK config, %v", err)
 	}
