@@ -10,18 +10,18 @@ import (
 )
 
 func EtcHostsBlock(ctx context.Context, prefix string) error {
-	svc, err := ecrClient(prefix)
+	svc, err := ecrClient(ctx, prefix)
 	if err != nil {
 		return err
 	}
 
-	result, err := svc.DescribePullThroughCacheRules(ctx)
+	rules, err := svc.DescribePullThroughCacheRules(ctx)
 	if err != nil {
 		return err
 	}
 
 	hosts := []string{}
-	for _, rule := range result.PullThroughCacheRules {
+	for _, rule := range rules {
 		hosts = append(hosts, *rule.UpstreamRegistryUrl)
 	}
 

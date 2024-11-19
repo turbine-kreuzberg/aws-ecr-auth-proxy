@@ -3,9 +3,12 @@ package lib
 import (
 	"context"
 	"fmt"
+	"io"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
+	"github.com/aws/aws-sdk-go-v2/service/ecr/types"
 )
 
 func ecrClient(ctx context.Context, prefix string) (*awsClient, error) {
@@ -28,9 +31,36 @@ func (svc *awsClient) GetAuthorizationToken(ctx context.Context) (*ecr.GetAuthor
 	return svc.svc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
 }
 
-func (svc *awsClient) DescribePullThroughCacheRules(ctx context.Context) (*ecr.DescribePullThroughCacheRulesOutput, error) {
-	input := &ecr.DescribePullThroughCacheRulesInput{EcrRepositoryPrefixes: []string{svc.prefix}}
+func (svc *awsClient) DescribePullThroughCacheRules(ctx context.Context) ([]types.PullThroughCacheRule, error) {
+	input := &ecr.DescribePullThroughCacheRulesInput{}
+	rules := []types.PullThroughCacheRule{}
 	result, err := svc.svc.DescribePullThroughCacheRules(ctx, input)
+	if err != nil {
+		return rules, fmt.Errorf("list caches: %v", err)
+	}
 
-	return result, err
+	for _, rule := range result.PullThroughCacheRules {
+		if strings.HasPrefix(*rule.EcrRepositoryPrefix, svc.prefix) {
+			rules = append(rules, rule)
+		}
+	}
+
+	return rules, nil
+}
+
+func ListCaches(ctx context.Context, prefix string, w io.Writer) error {
+	svc, err := ecrClient(ctx, prefix)
+	if err != nil {
+		return err
+	}
+
+	rules, err := svc.DescribePullThroughCacheRules(ctx)
+	if err != nil {
+		return err
+	}
+	for _, cache := range rules {
+		fmt.Fprintf(w, "%s.dkr.ecr.eu-central-1.amazonaws.com/%s -> %s\n", *cache.RegistryId, *cache.EcrRepositoryPrefix, *cache.UpstreamRegistryUrl)
+	}
+
+	return nil
 }

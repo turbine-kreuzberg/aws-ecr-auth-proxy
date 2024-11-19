@@ -11,13 +11,13 @@ import (
 )
 
 func fetchPullThroughCachePrefixes(ctx context.Context, svc *awsClient) (map[string]string, error) {
-	result, err := svc.DescribePullThroughCacheRules(ctx)
+	rules, err := svc.DescribePullThroughCacheRules(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to describe pull-through cache rules: %v", err)
 	}
 
 	prefixes := make(map[string]string)
-	for _, rule := range result.PullThroughCacheRules {
+	for _, rule := range rules {
 		prefixes[*rule.UpstreamRegistryUrl] = *rule.EcrRepositoryPrefix
 	}
 

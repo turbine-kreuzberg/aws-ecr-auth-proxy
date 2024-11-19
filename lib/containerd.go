@@ -13,17 +13,17 @@ import (
 var containerdFS embed.FS
 
 func InstallContainerdConfiguration(ctx context.Context, port int, prefix string) error {
-	svc, err := ecrClient(prefix)
+	svc, err := ecrClient(ctx, prefix)
 	if err != nil {
 		return err
 	}
 
-	result, err := svc.DescribePullThroughCacheRules(ctx)
+	rules, err := svc.DescribePullThroughCacheRules(ctx)
 	if err != nil {
 		return err
 	}
 
-	for _, rule := range result.PullThroughCacheRules {
+	for _, rule := range rules {
 		err = writeContainerdConfiguration(*rule.UpstreamRegistryUrl, *rule.EcrRepositoryPrefix, port)
 		if err != nil {
 			return err

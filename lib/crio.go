@@ -18,18 +18,18 @@ type Mirror struct {
 }
 
 func InstallCrioConfiguraiton(ctx context.Context, port int, prefix string) error {
-	svc, err := ecrClient(prefix)
+	svc, err := ecrClient(ctx, prefix)
 	if err != nil {
 		return err
 	}
 
-	result, err := svc.DescribePullThroughCacheRules(ctx)
+	rules, err := svc.DescribePullThroughCacheRules(ctx)
 	if err != nil {
 		return err
 	}
 
 	mirrors := []Mirror{}
-	for _, rule := range result.PullThroughCacheRules {
+	for _, rule := range rules {
 		upstream := *rule.UpstreamRegistryUrl
 
 		// fix docker quirks

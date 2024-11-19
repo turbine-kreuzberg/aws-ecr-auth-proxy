@@ -18,19 +18,18 @@ var (
 	gitHash  string
 	gitRef   string
 	portFlag = &cli.IntFlag{
-		Name:  "Port",
+		Name:  "port",
 		Value: 432,
 		Usage: "Local port to use.",
 	}
 	prefixFlag = &cli.StringFlag{
-		Name:     "Prefix",
+		Name:     "prefix",
 		Usage:    "Only select pull through caches with this prefix.",
 		Required: true,
 	}
 	app = &cli.App{
-		Name:   "AWS pull through credentials proxy",
-		Usage:  "AWS pull through credentials proxy forwards requests to AWS ECR pull through caches and adds a header to allow Access based on the role of the EC2 node.",
-		Action: run,
+		Name:  "AWS pull through credentials proxy",
+		Usage: "AWS pull through credentials proxy forwards requests to AWS ECR pull through caches and adds a header to allow Access based on the role of the EC2 node.",
 		Flags: []cli.Flag{
 			portFlag,
 		},
@@ -39,6 +38,14 @@ var (
 				Name:   "run",
 				Usage:  "Start the AWS pull through credentials proxy.",
 				Action: run,
+				Flags: []cli.Flag{
+					prefixFlag,
+				},
+			},
+			{
+				Name:   "list-caches",
+				Usage:  "List the AWS pull through caches in ECR.",
+				Action: ListCaches,
 				Flags: []cli.Flag{
 					prefixFlag,
 				},
@@ -101,6 +108,11 @@ func version(c *cli.Context) error {
 	}
 
 	return nil
+}
+
+func ListCaches(c *cli.Context) error {
+	prefix := c.String(prefixFlag.Name)
+	return lib.ListCaches(c.Context, prefix, os.Stdout)
 }
 
 func etcHosts(c *cli.Context) error {
