@@ -18,8 +18,10 @@ func InstallSystemdServiceConfiguraiton(port int, prefix string) error {
 	}
 
 	if port != 432 {
-		exec = fmt.Sprintf("%s --port %d --prefix %s", exec, port, prefix)
+		exec = fmt.Sprintf("%s --port %d", exec, port)
 	}
+
+	exec = fmt.Sprintf("%s --prefix \"%s\"", exec, prefix)
 
 	// Define the data to pass to the template
 	data := struct {
