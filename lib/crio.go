@@ -4,9 +4,9 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"html/template"
 	"log"
 	"os"
+	"text/template"
 )
 
 //go:embed crio.toml.tmpl

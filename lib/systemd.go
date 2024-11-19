@@ -3,9 +3,9 @@ package lib
 import (
 	"embed"
 	"fmt"
-	"html/template"
 	"log"
 	"os"
+	"text/template"
 )
 
 //go:embed systemd.service.tmpl
