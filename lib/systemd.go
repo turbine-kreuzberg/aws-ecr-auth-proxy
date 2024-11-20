@@ -17,11 +17,11 @@ func InstallSystemdServiceConfiguraiton(port int, prefix string) error {
 		return fmt.Errorf("lookup path of binary: %s", err)
 	}
 
+	exec = fmt.Sprintf("%s run --prefix \"%s\"", exec, prefix)
+
 	if port != 432 {
 		exec = fmt.Sprintf("%s --port %d", exec, port)
 	}
-
-	exec = fmt.Sprintf("%s --prefix \"%s\"", exec, prefix)
 
 	// Define the data to pass to the template
 	data := struct {
