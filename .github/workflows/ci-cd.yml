@@ -96,7 +96,7 @@ jobs:
                   docker run --rm --platform linux/arm64 aws-ecr-auth-proxy:test-arm64 /app/aws-ecr-auth-proxy version
 
             - name: Upload binaries
-              uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4
+              uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4
               with:
                   name: binaries
                   path: |
@@ -109,7 +109,7 @@ jobs:
                   docker save aws-ecr-auth-proxy:test-arm64 > aws-ecr-auth-proxy-arm64.tar
 
             - name: Upload Docker images
-              uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4
+              uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4
               with:
                   name: docker-images
                   path: |
