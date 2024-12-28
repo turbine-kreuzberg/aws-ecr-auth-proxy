@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/aws/aws-sdk-go-v2/config v1.28.7
-	github.com/aws/aws-sdk-go-v2/service/ecr v1.36.9
+	github.com/aws/aws-sdk-go-v2/service/ecr v1.38.0
 	github.com/urfave/cli/v2 v2.27.5
 )
 
