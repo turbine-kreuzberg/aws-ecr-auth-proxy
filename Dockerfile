@@ -1,5 +1,5 @@
 # Use a minimal base image
-FROM alpine:3.21@sha256:21dc6063fd678b478f57c0e13f47560d0ea4eeba26dfc947b2a4f81f686b9f45
+FROM alpine:3.21@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507
 
 # Install ca-certificates for HTTPS requests
 RUN apk add --no-cache ca-certificates
